@@ -1,10 +1,20 @@
+
 import requests
 import telebot
 import re
 from datetime import datetime
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 API_TOKEN = '7638464564:AAGSocZ5Gx9S5O8qdMHDOevLTy4rilgYYZ8'
 bot = telebot.TeleBot(API_TOKEN)
+
+# Setup a retry strategy for requests
+session = requests.Session()
+retry = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
+adapter = HTTPAdapter(max_retries=retry)
+session.mount('http://', adapter)
+session.mount('https://', adapter)
 
 # Function to escape Markdown V2 special characters
 def escape_markdown(text):
@@ -36,7 +46,9 @@ def check_account(message):
         uid = args[1]
 
         url = f"https://free-ff-api-src-5plp.onrender.com/api/v1/account?region={region}&uid={uid}"
-        response = requests.get(url)
+        
+        # Use session to send request with a timeout and retry logic
+        response = session.get(url, timeout=60)
 
         if response.status_code == 200:
             data = response.json()
